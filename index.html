@@ -139,20 +139,20 @@ class GameMap {
             }
         }
         
-        // 第 4 关：绘制左右边缘的红色传送门区域（约 3 个坦克车位宽度）
+        // 第 4 关：绘制左右边缘的红色传送门区域（贯穿整个侧边）
         if (currentLevel === 4) {
-            const portalWidth = TANK_SIZE * 3; // 3 个坦克车位的宽度
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            const portalWidth = 12; // 红色区域宽度（像素）
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
             // 左边缘传送区域（从上到下贯穿）
             ctx.fillRect(0, 0, portalWidth, CANVAS_SIZE);
             // 右边缘传送区域
             ctx.fillRect(CANVAS_SIZE - portalWidth, 0, portalWidth, CANVAS_SIZE);
             
             // 添加箭头提示
-            ctx.fillStyle = '#ff0000';
-            ctx.font = 'bold 20px Arial';
-            ctx.fillText('◄', 5, CANVAS_SIZE / 2);
-            ctx.fillText('►', CANVAS_SIZE - 20, CANVAS_SIZE / 2);
+            ctx.fillStyle = '#ffff00';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('◄', portalWidth + 2, CANVAS_SIZE / 2 + 8);
+            ctx.fillText('►', CANVAS_SIZE - portalWidth - 18, CANVAS_SIZE / 2 + 8);
         }
     }
     checkCollision(rect) {
@@ -160,6 +160,9 @@ class GameMap {
         const startR = Math.floor(rect.y / SMALL_TILE), endR = Math.floor((rect.y + rect.h - 1) / SMALL_TILE);
         for (let r = startR; r <= endR; r++) {
             for (let c = startC; c <= endC; c++) {
+                // 第 4 关：左右边缘不视为碰撞（允许穿越）
+                if (currentLevel === 4 && (c < 0 || c >= 26)) continue;
+                
                 if (r < 0 || r >= 26 || c < 0 || c >= 26) return true;
                 const val = this.grid[r][c];
                 if (val === 1 || val === 2 || val === 3 || val === 9) return true;
@@ -291,18 +294,18 @@ class Tank {
         else if (keys['a'] || keys['arrowleft']) { 
             this.dir = DIR.LEFT; 
             moved = true;
-            // 第 4 关：在左边缘红色区域（3 个坦克车位宽度）按左键穿越到右边
-            if (currentLevel === 4 && this.x < TANK_SIZE * 3) {
-                this.x = CANVAS_SIZE - this.w - TANK_SIZE * 3 + 5;
+            // 第 4 关：在左边缘红色区域按左键穿越到右边
+            if (currentLevel === 4 && this.x < 12) {
+                this.x = CANVAS_SIZE - this.w;
                 playPowerUp();
             }
         }
         else if (keys['d'] || keys['arrowright']) { 
             this.dir = DIR.RIGHT; 
             moved = true;
-            // 第 4 关：在右边缘红色区域（3 个坦克车位宽度）按右键穿越到左边
-            if (currentLevel === 4 && this.x > CANVAS_SIZE - TANK_SIZE * 3 - this.w) {
-                this.x = TANK_SIZE * 3 - this.w - 5;
+            // 第 4 关：在右边缘红色区域按右键穿越到左边
+            if (currentLevel === 4 && this.x > CANVAS_SIZE - this.w - 12) {
+                this.x = 0;
                 playPowerUp();
             }
         }
