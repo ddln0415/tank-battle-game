@@ -94,7 +94,7 @@ const startOverlay = document.getElementById('startOverlay');
 
 let keys = {};
 let gameRunning = false;
-let score = 0, lives = 10, currentLevel = 1;
+let score = 0, lives = 10, currentLevel = 1, initialLives = 10;
 let totalEnemies = 20, enemiesLeft = 20;
 let activeEnemies = [], bullets = [], effects = [], powerUps = [];
 let player = null, gameMap;
@@ -422,7 +422,7 @@ function addEffect(x, y, type) { effects.push(new Effect(x, y, type)); if(type.i
 
 // ================= 游戏主逻辑 =================
 function initGame() {
-    score = 0; lives = 10; currentLevel = 1; gameOver = false;
+    score = 0; lives = initialLives; currentLevel = 1; gameOver = false;
     document.getElementById('gameOverText').style.display = 'none';
     document.getElementById('levelClearText').style.display = 'none';
     loadLevel(currentLevel);
@@ -441,12 +441,21 @@ function loadLevel(level) {
 }
 
 function spawnPlayer() {
-    // 第 4 关玩家出生在地图中间，其他关卡在底部
-    if (currentLevel === 4) {
-        player = new Tank(6 * TILE_SIZE + 2, 6 * TILE_SIZE + 2, DIR.UP, '#00cc00', true);
+    // 第 4 关玩家首次出生在地图中间，死亡复活在底部基地附近
+    // 其他关卡始终在底部基地附近出生
+    let spawnX, spawnY;
+    
+    if (currentLevel === 4 && lives === initialLives) {
+        // 第 4 关第一次出生（满生命）在地图中间
+        spawnX = 6 * TILE_SIZE + 2;
+        spawnY = 6 * TILE_SIZE + 2;
     } else {
-        player = new Tank(8 * TILE_SIZE + 2, 12 * TILE_SIZE + 2, DIR.UP, '#00cc00', true);
+        // 死亡复活或其他关卡在底部基地附近
+        spawnX = 8 * TILE_SIZE + 2;
+        spawnY = 12 * TILE_SIZE + 2;
     }
+    
+    player = new Tank(spawnX, spawnY, DIR.UP, '#00cc00', true);
     player.shieldTime = 120;
 }
 
@@ -574,7 +583,7 @@ function selectLevel(level) {
     initAudio();
     currentLevel = level;
     score = 0; 
-    lives = 10; 
+    lives = initialLives; 
     gameOver = false;
     document.getElementById('gameOverText').style.display = 'none';
     document.getElementById('levelClearText').style.display = 'none';
