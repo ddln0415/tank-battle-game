@@ -33,7 +33,7 @@
     </div>
     
     <div class="ui-panel">
-        <div>关卡: <span id="level">1</span>/3</div>
+        <div>关卡: <span id="level">1</span>/4</div>
         <div>生命: <span id="lives">10</span></div>
         <div>得分: <span id="score">0</span></div>
         <div>敌人: <span id="enemies">20</span></div>
@@ -126,6 +126,21 @@ class GameMap {
                     else { ctx.fillStyle = '#333'; ctx.fillRect(x, y, SMALL_TILE, SMALL_TILE); }
                 }
             }
+        }
+        
+        // 第 4 关：绘制左右边缘的红色传送门区域
+        if (currentLevel === 4) {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            // 左边缘传送区域（从上到下贯穿）
+            ctx.fillRect(0, 0, 10, CANVAS_SIZE);
+            // 右边缘传送区域
+            ctx.fillRect(CANVAS_SIZE - 10, 0, 10, CANVAS_SIZE);
+            
+            // 添加箭头提示
+            ctx.fillStyle = '#ff0000';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('◄', 2, CANVAS_SIZE / 2);
+            ctx.fillText('►', CANVAS_SIZE - 14, CANVAS_SIZE / 2);
         }
     }
     checkCollision(rect) {
@@ -274,7 +289,18 @@ class Tank {
     }
     move() {
         const vec = DIR_VECTORS[this.dir];
-        const nextX = this.x + vec.x * this.speed, nextY = this.y + vec.y * this.speed;
+        let nextX = this.x + vec.x * this.speed, nextY = this.y + vec.y * this.speed;
+        
+        // 第 4 关传送门逻辑：玩家穿越左右边缘
+        if (this.isPlayer && currentLevel === 4) {
+            // 检查是否从左边缘穿出（红色传送区域）
+            if (nextX + this.w < 0) {
+                nextX = CANVAS_SIZE - this.w;
+            } else if (nextX > CANVAS_SIZE) {
+                nextX = -this.w;
+            }
+        }
+        
         if (nextX < 0 || nextX + this.w > CANVAS_SIZE || nextY < 0 || nextY + this.h > CANVAS_SIZE) return false;
         const nextRect = { x: nextX, y: nextY, w: this.w, h: this.h };
         if (gameMap.checkCollision(nextRect)) return false;
@@ -308,17 +334,45 @@ class Tank {
     draw() {
         if (!this.alive) return;
         ctx.save(); ctx.translate(this.x + this.w / 2, this.y + this.h / 2); ctx.rotate(this.dir * Math.PI / 2);
-        ctx.fillStyle = '#333'; ctx.fillRect(-this.w/2, -this.h/2, 6, this.h); ctx.fillRect(this.w/2 - 6, -this.h/2, 6, this.h);
+        
+        // 豹式坦克设计：迷彩绿色车身，更真实的炮塔和履带
+        // 履带
+        ctx.fillStyle = '#2d2d2d'; 
+        ctx.fillRect(-this.w/2, -this.h/2 + 2, 8, this.h - 4); 
+        ctx.fillRect(this.w/2 - 8, -this.h/2 + 2, 8, this.h - 4);
         
         // 加速状态下坦克变色闪烁
         let bodyColor = this.color;
         if (this.isPlayer && this.powerUpTime > 0) bodyColor = this.powerUpTime % 10 < 5 ? '#ff00ff' : '#00ffff';
         
-        ctx.fillStyle = bodyColor; ctx.fillRect(-this.w/2 + 6, -this.h/2 + 4, this.w - 12, this.h - 8);
-        ctx.fillStyle = this.isPlayer ? '#ffcc00' : '#aaa'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-3, -this.h/2 - 2, 6, this.h/2);
+        // 豹式坦克车身主体（迷彩绿或特殊颜色）
+        ctx.fillStyle = bodyColor; 
+        ctx.fillRect(-this.w/2 + 8, -this.h/2 + 6, this.w - 16, this.h - 12);
+        
+        // 豹式坦克炮塔（圆形）
+        ctx.fillStyle = this.isPlayer ? '#4a7c23' : '#555'; 
+        ctx.beginPath(); 
+        ctx.arc(0, 0, 10, 0, Math.PI * 2); 
+        ctx.fill();
+        
+        // 炮管（更长更细）
+        ctx.fillStyle = '#333'; 
+        ctx.fillRect(-2, -this.h/2 - 6, 4, this.h/2 + 4);
+        
+        // 豹式特色：车体前部倾斜装甲效果
+        ctx.fillStyle = this.isPlayer ? '#3d6b1e' : '#444';
+        ctx.fillRect(-this.w/2 + 10, -this.h/2 + 8, this.w - 20, 6);
+        
         ctx.restore();
-        if (this.shieldTime > 0) { ctx.strokeStyle = this.shieldTime % 10 < 5 ? '#fff' : '#0ff'; ctx.lineWidth = 2; ctx.strokeRect(this.x - 2, this.y - 2, this.w + 4, this.h + 4); }
+        
+        // 无敌护盾效果
+        if (this.shieldTime > 0) { 
+            ctx.strokeStyle = this.shieldTime % 10 < 5 ? '#fff' : '#0ff'; 
+            ctx.lineWidth = 2; 
+            ctx.beginPath();
+            ctx.arc(this.x + this.w/2, this.y + this.h/2, this.w/2 + 6, 0, Math.PI * 2);
+            ctx.stroke(); 
+        }
     }
 }
 
@@ -356,7 +410,12 @@ function loadLevel(level) {
 }
 
 function spawnPlayer() {
-    player = new Tank(8 * TILE_SIZE + 2, 12 * TILE_SIZE + 2, DIR.UP, '#00cc00', true);
+    // 第 4 关玩家出生在地图中间，其他关卡在底部
+    if (currentLevel === 4) {
+        player = new Tank(6 * TILE_SIZE + 2, 6 * TILE_SIZE + 2, DIR.UP, '#00cc00', true);
+    } else {
+        player = new Tank(8 * TILE_SIZE + 2, 12 * TILE_SIZE + 2, DIR.UP, '#00cc00', true);
+    }
     player.shieldTime = 120;
 }
 
@@ -402,7 +461,7 @@ function gameLoop() {
             transitionTimer--;
             if (transitionTimer <= 0) {
                 currentLevel++;
-                if (currentLevel > 3) endGame(true);
+                if (currentLevel > 4) endGame(true);
                 else loadLevel(currentLevel);
             }
         } else {
