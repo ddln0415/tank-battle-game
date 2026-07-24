@@ -139,19 +139,20 @@ class GameMap {
             }
         }
         
-        // 第 4 关：绘制左右边缘的红色传送门区域
+        // 第 4 关：绘制左右边缘的红色传送门区域（约 3 个坦克车位宽度）
         if (currentLevel === 4) {
+            const portalWidth = TANK_SIZE * 3; // 3 个坦克车位的宽度
             ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
             // 左边缘传送区域（从上到下贯穿）
-            ctx.fillRect(0, 0, 10, CANVAS_SIZE);
+            ctx.fillRect(0, 0, portalWidth, CANVAS_SIZE);
             // 右边缘传送区域
-            ctx.fillRect(CANVAS_SIZE - 10, 0, 10, CANVAS_SIZE);
+            ctx.fillRect(CANVAS_SIZE - portalWidth, 0, portalWidth, CANVAS_SIZE);
             
             // 添加箭头提示
             ctx.fillStyle = '#ff0000';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('◄', 2, CANVAS_SIZE / 2);
-            ctx.fillText('►', CANVAS_SIZE - 14, CANVAS_SIZE / 2);
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText('◄', 5, CANVAS_SIZE / 2);
+            ctx.fillText('►', CANVAS_SIZE - 20, CANVAS_SIZE / 2);
         }
     }
     checkCollision(rect) {
@@ -287,8 +288,24 @@ class Tank {
         let moved = false;
         if (keys['w'] || keys['arrowup']) { this.dir = DIR.UP; moved = true; }
         else if (keys['s'] || keys['arrowdown']) { this.dir = DIR.DOWN; moved = true; }
-        else if (keys['a'] || keys['arrowleft']) { this.dir = DIR.LEFT; moved = true; }
-        else if (keys['d'] || keys['arrowright']) { this.dir = DIR.RIGHT; moved = true; }
+        else if (keys['a'] || keys['arrowleft']) { 
+            this.dir = DIR.LEFT; 
+            moved = true;
+            // 第 4 关：在左边缘红色区域（3 个坦克车位宽度）按左键穿越到右边
+            if (currentLevel === 4 && this.x < TANK_SIZE * 3) {
+                this.x = CANVAS_SIZE - this.w - TANK_SIZE * 3 + 5;
+                playPowerUp();
+            }
+        }
+        else if (keys['d'] || keys['arrowright']) { 
+            this.dir = DIR.RIGHT; 
+            moved = true;
+            // 第 4 关：在右边缘红色区域（3 个坦克车位宽度）按右键穿越到左边
+            if (currentLevel === 4 && this.x > CANVAS_SIZE - TANK_SIZE * 3 - this.w) {
+                this.x = TANK_SIZE * 3 - this.w - 5;
+                playPowerUp();
+            }
+        }
         if (moved) this.move();
         if (keys[' '] || keys['j']) this.shoot();
     }
