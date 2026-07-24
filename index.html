@@ -34,7 +34,7 @@
     
     <div class="ui-panel">
         <div>关卡: <span id="level">1</span>/3</div>
-        <div>生命: <span id="lives">3</span></div>
+        <div>生命: <span id="lives">10</span></div>
         <div>得分: <span id="score">0</span></div>
         <div>敌人: <span id="enemies">20</span></div>
     </div>
@@ -83,7 +83,7 @@ const startOverlay = document.getElementById('startOverlay');
 
 let keys = {};
 let gameRunning = false;
-let score = 0, lives = 3, currentLevel = 1;
+let score = 0, lives = 10, currentLevel = 1;
 let totalEnemies = 20, enemiesLeft = 20;
 let activeEnemies = [], bullets = [], effects = [], powerUps = [];
 let player = null, gameMap;
@@ -166,25 +166,47 @@ class GameMap {
     }
 }
 
-// ================= 道具类 (星星) =================
+// ================= 道具类 (星星/炸弹/铠甲) =================
 class PowerUp {
-    constructor(x, y) {
+    constructor(x, y, type) {
         this.x = x; this.y = y; this.w = 30; this.h = 30;
+        this.type = type; // 'star', 'bomb', 'armor'
         this.alive = true; this.timer = 600; this.blinkTimer = 0;
     }
     update() {
         this.timer--; this.blinkTimer++;
         if (this.timer <= 0) this.alive = false;
         if (player && player.alive && rectIntersect(this, player)) {
-            player.applyPowerUp();
+            if (this.type === 'star') {
+                player.applyPowerUp();
+            } else if (this.type === 'bomb') {
+                // 炸死全部敌人
+                activeEnemies.forEach(e => {
+                    e.alive = false;
+                    addEffect(e.x, e.y, 'big_explode');
+                    score += 100;
+                });
+                playExplosion();
+            } else if (this.type === 'armor') {
+                // 20 秒无敌
+                player.shieldTime = 1200; // 20 秒 * 60fps
+            }
             this.alive = false;
             playPowerUp();
         }
     }
     draw() {
         if (this.blinkTimer % 20 < 10) {
-            ctx.fillStyle = '#ffcc00'; ctx.fillRect(this.x, this.y, this.w, this.h);
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Arial'; ctx.fillText('★', this.x + 6, this.y + 23);
+            if (this.type === 'star') {
+                ctx.fillStyle = '#ffcc00'; ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Arial'; ctx.fillText('★', this.x + 6, this.y + 23);
+            } else if (this.type === 'bomb') {
+                ctx.fillStyle = '#ff0000'; ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Arial'; ctx.fillText('💣', this.x + 5, this.y + 22);
+            } else if (this.type === 'armor') {
+                ctx.fillStyle = '#00ffff'; ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Arial'; ctx.fillText('🛡️', this.x + 5, this.y + 22);
+            }
         }
     }
 }
@@ -315,7 +337,7 @@ function addEffect(x, y, type) { effects.push(new Effect(x, y, type)); if(type.i
 
 // ================= 游戏主逻辑 =================
 function initGame() {
-    score = 0; lives = 3; currentLevel = 1; gameOver = false;
+    score = 0; lives = 10; currentLevel = 1; gameOver = false;
     document.getElementById('gameOverText').style.display = 'none';
     document.getElementById('levelClearText').style.display = 'none';
     loadLevel(currentLevel);
@@ -412,7 +434,11 @@ function gameLoop() {
             powerUpSpawnTimer++;
             if (powerUpSpawnTimer > 600 && powerUps.length === 0) {
                 const pos = gameMap.getRandomEmptyPos();
-                if (pos) powerUps.push(new PowerUp(pos.x, pos.y));
+                if (pos) {
+                    const types = ['star', 'bomb', 'armor'];
+                    const randomType = types[Math.floor(Math.random() * types.length)];
+                    powerUps.push(new PowerUp(pos.x, pos.y, randomType));
+                }
                 powerUpSpawnTimer = 0;
             }
 
